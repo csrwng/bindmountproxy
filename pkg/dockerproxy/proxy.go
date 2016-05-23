@@ -1,6 +1,7 @@
 package dockerproxy
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -17,9 +18,12 @@ const (
 	HeaderUpgrade    = "Upgrade"
 )
 
+type RequestModifierFunc func(req *http.Request) (*http.Request, error)
+
 type dockerProxy struct {
-	dockerHost    string
-	internalProxy *httputil.ReverseProxy
+	dockerHost      string
+	requestModifier RequestModifierFunc
+	internalProxy   *httputil.ReverseProxy
 }
 
 var fakeDockerURL = mustParse("http://dockerhost")
@@ -32,26 +36,33 @@ func mustParse(str string) *url.URL {
 	return u
 }
 
-func New(director func(*http.Request)) http.Handler {
+func New(requestModifierFn RequestModifierFunc) http.Handler {
 	internalProxy := httputil.NewSingleHostReverseProxy(fakeDockerURL)
 	internalProxy.Transport = &http.Transport{
 		Dial: dialDockerWrapper,
 	}
-	internalProxy.Director = director
 	return &dockerProxy{
-		internalProxy: internalProxy,
+		requestModifier: requestModifierFn,
+		internalProxy:   internalProxy,
 	}
 }
 
 // ServeHTTP handles the proxy request
 func (p *dockerProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	p.logMessage("Serving %s %s", req.Method, req.URL.String())
+	p.logMessage("Serving %s %s\n", req.Method, req.URL.String())
 	upgraded, err := p.tryUpgrade(w, req)
 	if err != nil {
 		p.writeError(w, err)
 	}
 	if upgraded {
 		return
+	}
+	if p.requestModifier != nil {
+		req, err = p.requestModifier(req)
+		if err != nil {
+			p.logError("Error modifying request: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	}
 	p.internalProxy.ServeHTTP(w, req)
 }
@@ -75,7 +86,9 @@ func isUpgradeRequest(req *http.Request) bool {
 }
 
 func (p *dockerProxy) dockerURL(req *http.Request) string {
-	return ""
+	u := *req.URL
+	u.Host = fakeDockerURL.Host
+	return u.String()
 }
 
 func dialDockerWrapper(string, string) (net.Conn, error) {
@@ -116,6 +129,9 @@ func (p *dockerProxy) tryUpgrade(w http.ResponseWriter, req *http.Request) (bool
 	}
 	newRequest.Header = req.Header
 
+	reqBytes := &bytes.Buffer{}
+	newRequest.Write(reqBytes)
+
 	if err = newRequest.Write(backendConn); err != nil {
 		return true, err
 	}
@@ -128,6 +144,8 @@ func (p *dockerProxy) tryUpgrade(w http.ResponseWriter, req *http.Request) (bool
 		if err != nil {
 			p.logError("Error proxying data from client to backend: %v", err)
 		}
+		requestHijackedConn.Close()
+		backendConn.Close()
 		wg.Done()
 	}()
 
@@ -136,6 +154,8 @@ func (p *dockerProxy) tryUpgrade(w http.ResponseWriter, req *http.Request) (bool
 		if err != nil {
 			p.logError("Error proxying data from backend to client: %v", err)
 		}
+		requestHijackedConn.Close()
+		backendConn.Close()
 		wg.Done()
 	}()
 

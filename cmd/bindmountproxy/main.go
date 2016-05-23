@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/csrwng/bindmountproxy/pkg/bindmountproxy"
 )
 
 func main() {
+	args := os.Args
+	fmt.Printf("Args: %v\n", args)
 	cfg := defaultOpenShiftConfig()
 	http.ListenAndServe(":2675", bindmountproxy.New(cfg))
 }
@@ -28,7 +32,7 @@ func defaultOpenShiftConfig() *bindmountproxy.BindMountProxyConfig {
 			ImagePattern: pattern,
 			Mounts: []bindmountproxy.BindMountConfig{
 				{
-					Source:      "/data/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+					Source:      "/home/cewong/go/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
 					Destination: "/usr/bin/openshift",
 				},
 			},

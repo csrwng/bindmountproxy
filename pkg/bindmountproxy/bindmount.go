@@ -30,8 +30,8 @@ type BindMountProxyConfig struct {
 }
 
 func New(config *BindMountProxyConfig) http.Handler {
-	director := bindMountDirectorFunc(config)
-	return dockerproxy.New(director)
+	requestModifier := bindMountRequestModifier(config)
+	return dockerproxy.New(requestModifier)
 }
 
 type createContainerData struct {
@@ -39,36 +39,40 @@ type createContainerData struct {
 	HostConfig *docker.HostConfig `json:"HostConfig,omitempty"`
 }
 
-func bindMountDirectorFunc(config *BindMountProxyConfig) func(*http.Request) {
-	return func(req *http.Request) {
+func bindMountRequestModifier(config *BindMountProxyConfig) dockerproxy.RequestModifierFunc {
+	return func(req *http.Request) (*http.Request, error) {
 		if isContainerCreate(req) {
+			fmt.Printf("Processing a container create: %s\n", req.URL.String())
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
 				// Log error
-				return
+				return nil, err
 			}
-			bodyReader := bytes.NewBuffer(body)
-			decoder := json.NewDecoder(bodyReader)
+			decoder := json.NewDecoder(bytes.NewBuffer(body))
 			data := &createContainerData{}
 			err = decoder.Decode(data)
 			if err != nil {
 				glog.Errorf("Error decoding container create data: %v", err)
-				bodyReader.Reset()
-				req.Body = ioutil.NopCloser(bodyReader)
-				return
+				return nil, err
 			}
+			fmt.Printf("The decoded data is config: %#v, hostConfig: %#v\n", data.Config, data.HostConfig)
 			err = addBindMounts(config, data)
 			if err != nil {
 				glog.Errorf("Error adding bind mounts: %v", err)
-				bodyReader.Reset()
-				req.Body = ioutil.NopCloser(bodyReader)
-				return
+				return nil, err
 			}
+
 			newBody := &bytes.Buffer{}
 			encoder := json.NewEncoder(newBody)
 			encoder.Encode(data)
-
+			newReq, err := http.NewRequest(req.Method, req.URL.String(), ioutil.NopCloser(newBody))
+			if err != nil {
+				return nil, err
+			}
+			newReq.Header = req.Header
+			return newReq, nil
 		}
+		return req, nil
 	}
 }
 
@@ -85,7 +89,7 @@ func addBindMounts(config *BindMountProxyConfig, data *createContainerData) erro
 		if re.MatchString(data.Image) {
 			for _, mount := range imageConfig.Mounts {
 				data.HostConfig.Binds = append(data.HostConfig.Binds,
-					fmt.Sprintf("%s:%s", mount.Source, mount.Destination))
+					fmt.Sprintf("%s:%s:z", mount.Source, mount.Destination))
 			}
 		}
 	}
