@@ -10,12 +10,21 @@ import (
 
 func main() {
 	args := os.Args
-	fmt.Printf("Args: %v\n", args)
-	cfg := defaultOpenShiftConfig()
-	http.ListenAndServe(":2675", bindmountproxy.New(cfg))
+	if len(args) < 3 {
+		fmt.Printf(usage())
+		os.Exit(1)
+	}
+	listenSpec := os.Args[1]
+	binariesPath := os.Args[2]
+	cfg := defaultOpenShiftConfig(binariesPath)
+	err := http.ListenAndServe(listenSpec, bindmountproxy.New(cfg))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
-func defaultOpenShiftConfig() *bindmountproxy.BindMountProxyConfig {
+func defaultOpenShiftConfig(path string) *bindmountproxy.BindMountProxyConfig {
 	imagePatterns := []string{
 		"(openshift/origin$)|(openshift/origin:.*)",
 		"openshift/origin-deployer.*",
@@ -32,7 +41,7 @@ func defaultOpenShiftConfig() *bindmountproxy.BindMountProxyConfig {
 			ImagePattern: pattern,
 			Mounts: []bindmountproxy.BindMountConfig{
 				{
-					Source:      "/home/cewong/go/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+					Source:      path,
 					Destination: "/usr/bin/openshift",
 				},
 			},
@@ -40,4 +49,22 @@ func defaultOpenShiftConfig() *bindmountproxy.BindMountProxyConfig {
 	}
 
 	return cfg
+}
+
+const usageString = `
+Usage:
+%[1]s LISTEN_SPEC OPENSHIFT_PATH
+
+where LISTEN_SPEC is either a port (ie. :1080) 
+or an IP and port (ie. 127.0.0.1:1080) 
+
+and OPENSHIFT_PATH is the path to the openshift binary
+(ie. /data/src/github.com/openshift/origin/_output/local/bin/linux/adm64/openshift )
+
+Example:
+%[1]s ":2375" $(which openshift)
+`
+
+func usage() string {
+	return fmt.Sprintf(usageString, os.Args[0])
 }
