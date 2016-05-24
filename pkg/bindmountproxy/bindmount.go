@@ -42,7 +42,6 @@ type createContainerData struct {
 func bindMountRequestModifier(config *BindMountProxyConfig) dockerproxy.RequestModifierFunc {
 	return func(req *http.Request) (*http.Request, error) {
 		if isContainerCreate(req) {
-			fmt.Printf("Processing a container create: %s\n", req.URL.String())
 			body, err := ioutil.ReadAll(req.Body)
 			if err != nil {
 				// Log error
