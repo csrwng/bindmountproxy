@@ -54,7 +54,6 @@ func bindMountRequestModifier(config *BindMountProxyConfig) dockerproxy.RequestM
 				glog.Errorf("Error decoding container create data: %v", err)
 				return nil, err
 			}
-			fmt.Printf("The decoded data is config: %#v, hostConfig: %#v\n", data.Config, data.HostConfig)
 			err = addBindMounts(config, data)
 			if err != nil {
 				glog.Errorf("Error adding bind mounts: %v", err)
