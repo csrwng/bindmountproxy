@@ -1,7 +1,6 @@
 package dockerproxy
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -58,7 +57,7 @@ func (p *dockerProxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	glog.Infof("Serving %s %s\n", req.Method, req.URL.String())
 	upgraded, err := p.tryUpgrade(w, req)
 	if err != nil {
-		p.writeError(w, err)
+		glog.Errorf("error occurred on upgrade: %v", err)
 	}
 	if upgraded {
 		return
@@ -117,7 +116,6 @@ func (p *dockerProxy) tryUpgrade(w http.ResponseWriter, req *http.Request) (bool
 	if !ok {
 		return true, fmt.Errorf("backend connection is not connection closer")
 	}
-
 	requestHijackedConn, _, err := w.(http.Hijacker).Hijack()
 	if err != nil {
 		return true, err
@@ -127,17 +125,16 @@ func (p *dockerProxy) tryUpgrade(w http.ResponseWriter, req *http.Request) (bool
 		return true, fmt.Errorf("request connection is not connection closer")
 	}
 
-	newRequest, err := http.NewRequest(req.Method, p.dockerURL(req), req.Body)
-	if err != nil {
-		return true, err
-	}
-	newRequest.Header = req.Header
+	/*
+		newRequest, err := http.NewRequest(req.Method, p.dockerURL(req), req.Body)
+		if err != nil {
+			return true, fmt.Errorf("error creating new request: %v", err)
+		}
+		newRequest.Header = req.Header
+	*/
 
-	reqBytes := &bytes.Buffer{}
-	newRequest.Write(reqBytes)
-
-	if err = newRequest.Write(backendConn); err != nil {
-		return true, err
+	if err = req.Write(backendConn); err != nil {
+		return true, fmt.Errorf("error writing request to backend: %v", err)
 	}
 
 	wg := &sync.WaitGroup{}
@@ -146,7 +143,7 @@ func (p *dockerProxy) tryUpgrade(w http.ResponseWriter, req *http.Request) (bool
 	go func() {
 		_, err := io.Copy(backendConn, requestHijackedConn)
 		if err != nil {
-			glog.Errorf("Error proxying data from client to backend: %v", err)
+			glog.Errorf("Error copying data from client to backend: %v", err)
 		}
 		wg.Done()
 		backendCloser.CloseWrite()
@@ -156,7 +153,7 @@ func (p *dockerProxy) tryUpgrade(w http.ResponseWriter, req *http.Request) (bool
 	go func() {
 		_, err := io.Copy(requestHijackedConn, backendConn)
 		if err != nil {
-			glog.Errorf("Error proxying data from backend to client: %v", err)
+			glog.Errorf("Error copying data from backend to client: %v", err)
 		}
 		wg.Done()
 		requestCloser.CloseWrite()

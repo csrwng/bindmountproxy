@@ -26,7 +26,7 @@ func main() {
 			fmt.Printf("error: cannot read configuration: %v", err)
 			os.Exit(1)
 		}
-		cfg := &bindmountproxy.BindMountProxyConfig{}
+		cfg = &bindmountproxy.BindMountProxyConfig{}
 		err = json.Unmarshal(configData, cfg)
 		if err != nil {
 			fmt.Printf("error: cannot unmarshal configuration: %v", err)
@@ -40,6 +40,7 @@ func main() {
 		binariesPath := os.Args[2]
 		cfg = defaultOpenShiftConfig(binariesPath)
 	}
+	fmt.Printf("Starting bindmount proxy with config: %#v\n", cfg)
 	err := http.ListenAndServe(listenSpec, bindmountproxy.New(cfg))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
