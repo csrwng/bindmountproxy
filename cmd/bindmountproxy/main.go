@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ func main() {
 	}
 	listenSpec := os.Args[1]
 	binariesPath := os.Args[2]
+	flag.Parse()
 	cfg := defaultOpenShiftConfig(binariesPath)
 	err := http.ListenAndServe(listenSpec, bindmountproxy.New(cfg))
 	if err != nil {
