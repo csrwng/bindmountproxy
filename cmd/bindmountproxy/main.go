@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -10,15 +12,34 @@ import (
 )
 
 func main() {
+	var cfg *bindmountproxy.BindMountProxyConfig
+	flag.Parse()
 	args := os.Args
-	if len(args) < 3 {
+	if len(args) < 2 {
 		fmt.Printf(usage())
 		os.Exit(1)
 	}
-	listenSpec := os.Args[1]
-	binariesPath := os.Args[2]
-	flag.Parse()
-	cfg := defaultOpenShiftConfig(binariesPath)
+	listenSpec := args[1]
+	if len(os.Getenv("PROXY_CONFIG")) > 0 {
+		configData, err := ioutil.ReadFile(os.Getenv("PROXY_CONFIG"))
+		if err != nil {
+			fmt.Printf("error: cannot read configuration: %v", err)
+			os.Exit(1)
+		}
+		cfg := &bindmountproxy.BindMountProxyConfig{}
+		err = json.Unmarshal(configData, cfg)
+		if err != nil {
+			fmt.Printf("error: cannot unmarshal configuration: %v", err)
+			os.Exit(1)
+		}
+	} else {
+		if len(args) < 3 {
+			fmt.Printf("specify a path to the 'openshift' binary")
+			os.Exit(1)
+		}
+		binariesPath := os.Args[2]
+		cfg = defaultOpenShiftConfig(binariesPath)
+	}
 	err := http.ListenAndServe(listenSpec, bindmountproxy.New(cfg))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
