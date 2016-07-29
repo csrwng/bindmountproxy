@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang/glog"
 )
@@ -43,6 +44,7 @@ func mustParse(str string) *url.URL {
 
 func New(requestModifierFn RequestModifierFunc) http.Handler {
 	internalProxy := httputil.NewSingleHostReverseProxy(fakeDockerURL)
+	internalProxy.FlushInterval = 500 * time.Millisecond
 	internalProxy.Transport = &http.Transport{
 		Dial: dialDockerWrapper,
 	}
