@@ -87,7 +87,7 @@ func addBindMounts(config *BindMountProxyConfig, data *createContainerData) erro
 		if re.MatchString(data.Image) {
 			for _, mount := range imageConfig.Mounts {
 				data.HostConfig.Binds = append(data.HostConfig.Binds,
-					fmt.Sprintf("%s:%s:z", mount.Source, mount.Destination))
+					fmt.Sprintf("%s:%s", mount.Source, mount.Destination))
 			}
 		}
 	}
