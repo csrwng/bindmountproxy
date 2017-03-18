@@ -20,9 +20,15 @@ type BindMountConfig struct {
 	Destination string `json:"destination"`
 }
 
+type EnvConfig struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 type ImageBindMountConfig struct {
 	ImagePattern string            `json:"imagePattern"`
 	Mounts       []BindMountConfig `json:"mounts"`
+	Env          []EnvConfig       `json:"env"`
 }
 
 type BindMountProxyConfig struct {
@@ -88,6 +94,9 @@ func addBindMounts(config *BindMountProxyConfig, data *createContainerData) erro
 			for _, mount := range imageConfig.Mounts {
 				data.HostConfig.Binds = append(data.HostConfig.Binds,
 					fmt.Sprintf("%s:%s:z", mount.Source, mount.Destination))
+			}
+			for _, env := range imageConfig.Env {
+				data.Env = append(data.Env, fmt.Sprintf("%s=%s", env.Name, env.Value))
 			}
 		}
 	}
