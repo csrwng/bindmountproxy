@@ -106,3 +106,7 @@ func addBindMounts(config *BindMountProxyConfig, data *createContainerData) erro
 func isContainerCreate(req *http.Request) bool {
 	return strings.HasSuffix(req.URL.Path, "/containers/create")
 }
+
+func isVersion(req *http.Request) bool {
+	return strings.HasSuffix(req.URL.Path, "/version")
+}

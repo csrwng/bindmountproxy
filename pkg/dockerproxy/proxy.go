@@ -127,14 +127,6 @@ func (p *dockerProxy) tryUpgrade(w http.ResponseWriter, req *http.Request) (bool
 		return true, fmt.Errorf("request connection is not connection closer")
 	}
 
-	/*
-		newRequest, err := http.NewRequest(req.Method, p.dockerURL(req), req.Body)
-		if err != nil {
-			return true, fmt.Errorf("error creating new request: %v", err)
-		}
-		newRequest.Header = req.Header
-	*/
-
 	if err = req.Write(backendConn); err != nil {
 		return true, fmt.Errorf("error writing request to backend: %v", err)
 	}
