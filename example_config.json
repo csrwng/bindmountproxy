@@ -1,0 +1,67 @@
+{
+  "bindMounts": [
+    {
+      "imagePattern":"(openshift/origin$)|(openshift/origin:.*)",
+      "mounts": [
+        {
+          "source": "/data/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+          "destination":"/usr/bin/openshift"
+        }
+      ]
+    },
+    {
+      "imagePattern":"openshift/origin-deployer.*",
+      "mounts": [
+        {
+          "source": "/data/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+          "destination":"/usr/bin/openshift"
+        }
+      ]
+    },
+    {
+      "imagePattern":"openshift/origin-recycler.*",
+      "mounts": [
+        {
+          "source": "/data/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+          "destination":"/usr/bin/openshift"
+        }
+      ]
+    },
+    {
+      "imagePattern":"openshift/origin-docker-builder.*",
+      "mounts": [
+        {
+          "source": "/data/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+          "destination":"/usr/bin/openshift"
+        }
+      ]
+    },
+    {
+      "imagePattern":"openshift/origin-sti-builder.*",
+      "mounts": [
+        {
+          "source": "/data/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+          "destination":"/usr/bin/openshift"
+        }
+      ]
+    },
+    {
+      "imagePattern":"openshift/origin-f5-router.*",
+      "mounts": [
+        {
+          "source": "/data/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+          "destination":"/usr/bin/openshift"
+        }
+      ]
+    },
+    {
+      "imagePattern":"openshift/node.*",
+      "mounts": [
+        {
+          "source": "/data/src/github.com/openshift/origin/_output/local/bin/linux/amd64/openshift",
+          "destination":"/usr/bin/openshift"
+        }
+      ]
+    }
+  ]
+}
